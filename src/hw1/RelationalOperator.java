@@ -7,6 +7,5 @@ public enum RelationalOperator {
 	GTE,
 	LTE,
 	NOTEQ
-	
 
 }
