@@ -38,11 +38,11 @@ public class YourUnitTests {
 
 	@Test
 	public void testAsCase() {
-		Query q = new Query("SELECT a1 AS alias1, a2 AS alias2 FROM A");
+		Query q = new Query("SELECT a1 AS bladee, a2 AS drain FROM A");
 	    Relation r = q.execute();
 	    
-	    assertTrue(r.getDesc().getFieldName(0).equals("alias1"));
-	    assertTrue(r.getDesc().getFieldName(1).equals("alias2"));
+	    assertTrue(r.getDesc().getFieldName(0).equals("bladee"));
+	    assertTrue(r.getDesc().getFieldName(1).equals("drain"));
 	    
 	    assertTrue(r.getTuples().size() == 8);
 	    assertTrue(r.getDesc().getSize() == 8);
