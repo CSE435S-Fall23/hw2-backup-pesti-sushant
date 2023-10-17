@@ -15,7 +15,7 @@ import hw1.Database;
 import hw1.IntField;
 import hw1.Query;
 import hw1.Relation;
-
+import hw1.Tuple;
 
 
 public class QueryTest {
@@ -52,6 +52,13 @@ public class QueryTest {
 		Query q = new Query("SELECT a1, a2 FROM A WHERE a1 = 530");
 		Relation r = q.execute();
 		
+		System.out.println("r.getTuples().size() is: " + r.getTuples().size());
+	    System.out.println("r.getDesc().getSize() is: " + r.getDesc().getSize());
+
+	    for (Tuple tuple : r.getTuples()) {
+	    	System.out.println("Tuple: " + tuple);
+	    }
+	    
 		assert(r.getTuples().size() == 5);
 		assert(r.getDesc().getSize() == 8);
 	}

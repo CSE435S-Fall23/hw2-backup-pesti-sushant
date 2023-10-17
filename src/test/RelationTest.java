@@ -18,6 +18,7 @@ import hw1.HeapFile;
 import hw1.IntField;
 import hw1.Relation;
 import hw1.RelationalOperator;
+import hw1.Tuple;
 import hw1.TupleDesc;
 
 public class RelationTest {
@@ -57,8 +58,14 @@ public class RelationTest {
 	@Test
 	public void testSelect() {
 		Relation ar = new Relation(ahf.getAllTuples(), atd);
+		
+	    for (Tuple t : ahf.getAllTuples()) {
+	        System.out.println(t);
+	    }
+
 		ar = ar.select(0, RelationalOperator.EQ, new IntField(530));
 		
+		System.out.println(ar.getTuples().size());
 		assertTrue(ar.getTuples().size() == 5);
 		assertTrue(ar.getDesc().equals(atd));
 	}
@@ -78,6 +85,17 @@ public class RelationTest {
 	public void testJoin() {
 		Relation tr = new Relation(testhf.getAllTuples(), testtd);
 		Relation ar = new Relation(ahf.getAllTuples(), atd);
+		
+		System.out.println("Tuples from testhf: ");
+		for (Tuple t : testhf.getAllTuples()) {
+			System.out.println(t);
+		}
+		
+		System.out.println("\nTuples from ahf: ");
+		for (Tuple t : ahf.getAllTuples()) {
+			System.out.println(t);
+		}
+		System.out.println("---");
 		tr = tr.join(ar, 0, 0);
 		
 		assert(tr.getTuples().size() == 5);

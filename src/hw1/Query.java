@@ -1,3 +1,5 @@
+// Sushant Ramesh and Anders Pesti
+
 package hw1;
 
 import java.util.ArrayList;
@@ -15,6 +17,7 @@ import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectBody;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 
 public class Query {
@@ -29,6 +32,7 @@ public class Query {
 		Statement statement = null;
 		try {
 			statement = CCJSqlParserUtil.parse(q);
+			System.out.println("Parsed SQL query: " + q);
 		} catch (JSQLParserException e) {
 			System.out.println("Unable to parse query");
 			e.printStackTrace();
@@ -42,17 +46,51 @@ public class Query {
 		PlainSelect sb = (PlainSelect)selectStatement.getSelectBody();
 		
 		Table mainTable = (Table) sb.getFromItem();
-		Relation mainRelation = Database.getCatalog().getRelation(mainTable.getName());
+		int mainTableId = Database.getCatalog().getTableId(mainTable.getName());
+		HeapFile mainRelationFile = Database.getCatalog().getDbFile(mainTableId);
+		
+		ArrayList<Tuple> mainTuples = mainRelationFile.getAllTuples();
+		TupleDesc mainDesc = mainRelationFile.getTupleDesc();
+		Relation mainRelation = new Relation(mainTuples, mainDesc);
+		System.out.println("Main Relation Tuple Count: " + mainRelation.getTuples().size());
+		System.out.println("Main Relation Description: " + mainRelation.getDesc());
+
 		
 		// Handle JOIN
+		mainTable = null; //!!!
 		List<Join> joins = sb.getJoins();
 		if (joins != null) {
 			for (Join j : joins) {
-				Table joinTable = (Table) j.getRightItem();
-				Relation joinRelation = Database.getCatalog().getRelation(joinTable.getName());
-
-				mainRelation = mainRelation.join(joinRelation, j.getOnExpression());
+				Table rightTable = (Table) j.getRightItem();
+				
+				
+				//Table joinTable = (Table) j.getRightItem();
+				int joinTableId = Database.getCatalog().getTableId(rightTable.getName());
+				HeapFile joinRelationFile = Database.getCatalog().getDbFile(joinTableId);
+				
+				ArrayList<Tuple> joinTuples = joinRelationFile.getAllTuples();
+				TupleDesc joinDesc = joinRelationFile.getTupleDesc();
+				Relation joinRelation = new Relation(joinTuples, joinDesc);
+				
+				if (j.getOnExpression() instanceof EqualsTo) {
+					EqualsTo equalsExp = (EqualsTo) j.getOnExpression();
+					Column leftCol = (Column) equalsExp.getLeftExpression();
+					Column rightCol = (Column) equalsExp.getRightExpression();
+					
+					String mainFieldName = leftCol.getColumnName();
+					String joinFieldName = rightCol.getColumnName();
+					
+					int mainFieldNum = mainRelationFile.getTupleDesc().nameToId(mainFieldName);
+					int joinFieldNum = joinRelationFile.getTupleDesc().nameToId(joinFieldName);
+					
+					mainRelation = mainRelation.join(joinRelation, mainFieldNum, joinFieldNum);
+				}
+				
 			}
+		}
+		
+		if (mainTable == null) {
+			mainTable = (Table) sb.getFromItem();
 		}
 
 		// Handle the WHERE clause
@@ -73,6 +111,7 @@ public class Query {
 		}
 
 		// Handle the SELECT clause
+		// ...
 		List<SelectItem> selectItems = sb.getSelectItems();
 		ArrayList<Integer> fields = new ArrayList<>();
 		ArrayList<String> names = new ArrayList<>();
@@ -97,15 +136,32 @@ public class Query {
 					}
 
 					String colName = si.toString();
+					
+					if (colName.startsWith("SUM(") && colName.endsWith(")")) {
+						colName = colName.substring(4, colName.length() - 1);
+					}
+					
+					if (colName.contains(" AS ")) {
+						colName = colName.split(" AS ")[0].trim();
+					}
+					
+					System.out.println("Extracted column name: " + colName);
+
+					
 					int fieldIndex = getIndexOfField(mainRelation, colName);
 					if (fieldIndex == -1) {
+					    System.out.println("Available columns in mainRelation: " + mainRelation.getDesc().getFieldName(mainTableId));
+
+						System.out.println("Failed to find column: " + colName);
 						throw new IllegalArgumentException("Invalid column name");
 					}
 					fields.add(fieldIndex);
 				}
 			}
 
-			mainRelation = mainRelation.project(fields, names);
+			mainRelation = mainRelation.project(fields);
+			mainRelation = mainRelation.rename(fields, names);
+
 		}
 
 		// GROUP BY

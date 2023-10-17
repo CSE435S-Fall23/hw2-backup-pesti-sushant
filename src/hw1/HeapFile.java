@@ -1,4 +1,4 @@
-//Sushant Ramesh
+// Sushant Ramesh and Anders Pesti
 package hw1;
 
 import java.io.File;
@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 

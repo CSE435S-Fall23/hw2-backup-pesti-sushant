@@ -1,3 +1,5 @@
+// Sushant Ramesh and Anders Pesti
+
 package hw1;
 
 import java.util.ArrayList;
@@ -42,6 +44,10 @@ public class Relation {
 	 * @return
 	 */
 	public Relation rename(ArrayList<Integer> fields, ArrayList<String> names) {
+		
+		if (fields.size() != names.size()) {
+			return this;
+		}
 		String[] newNames = new String[td.numFields()];
 		Type[] types = new Type[td.numFields()];
 
@@ -51,7 +57,14 @@ public class Relation {
 		}
 
 		for (int i = 0; i < fields.size(); i++) {
-			newNames[fields.get(i)] = names.get(i);
+			int fieldIndex = fields.get(i);
+			
+			if (fieldIndex < 0 || fieldIndex >= newNames.length) {
+				continue;
+			}
+			
+			newNames[fieldIndex] = names.get(i);
+			//newNames[fields.get(i)] = names.get(i);
 		}
 
 		TupleDesc newTupleDesc = new TupleDesc(types, newNames);
@@ -108,7 +121,7 @@ public class Relation {
 	public Relation join(Relation other, int field1, int field2) {
 		TupleDesc newTupleDesc = other.getDesc();
 
-		String[] joinNames = new String[td.numFields() + other.getDesc().numFields()];\
+		String[] joinNames = new String[td.numFields() + other.getDesc().numFields()];
 		Type[] joinTypes = new Type[joinNames.length];
 
 		for (int i = 0; i < td.numFields(); i++) {
@@ -121,11 +134,15 @@ public class Relation {
 			joinTypes[i + td.numFields()] = newTupleDesc.getType(i);
 		}
 
+		
+
 		TupleDesc joinTupleDesc = new TupleDesc(joinTypes, joinNames);
 		ArrayList<Tuple> joinTuples = new ArrayList<>();
-
+		
+		
 		for (Tuple tuple_1 : tuples) {
 			for (Tuple tuple_2 : other.getTuples()) {
+
 				if (tuple_1.getField(field1).compare(RelationalOperator.EQ, tuple_2.getField(field2))) {
 					Tuple newTuple = new Tuple(joinTupleDesc);
 					for (int i = 0; i < td.numFields(); i++) {

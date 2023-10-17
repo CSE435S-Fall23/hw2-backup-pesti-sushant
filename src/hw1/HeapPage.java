@@ -1,4 +1,4 @@
-//Sushant Ramesh
+// Sushant Ramesh and Anders Pesti
 package hw1;
 
 import java.io.ByteArrayInputStream;
@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class HeapPage {
     private int id;
@@ -19,6 +20,9 @@ public class HeapPage {
     private int tableId;
 
     public HeapPage(int id, byte[] data, int tableId) throws IOException {
+    	if (data.length != HeapFile.PAGE_SIZE) {
+    		throw new IllegalArgumentException("Data length does not match page size");
+    	}
         this.id = id;
         this.tableId = tableId;
 
@@ -32,8 +36,12 @@ public class HeapPage {
 
         try {
             tuples = new Tuple[numSlots];
-            for (int i = 0; i < tuples.length; i++)
-                tuples[i] = readNextTuple(dis, i);
+            for (int i = 0; i < tuples.length; i++) {
+            	if (dis.available() < td.getSize()) {
+            		break;
+            	}
+            	tuples[i] = readNextTuple(dis, i);
+            }
         } catch (NoSuchElementException e) {
             e.printStackTrace();
         }
@@ -45,17 +53,24 @@ public class HeapPage {
     }
 
     public int getNumSlots() {
-        return (HeapFile.PAGE_SIZE - getHeaderSize()) / this.td.getSize();
+    	/*
+    	int headerSize = getHeaderSize();
+        return (HeapFile.PAGE_SIZE - headerSize) / this.td.getSize();
+        */
+    	return (int)Math.floor(HeapFile.PAGE_SIZE / (td.getSize()+(1/8.0)));
     }
 
     private int getHeaderSize() {
-        return (int) Math.ceil((double) this.numSlots / 8);
+        return (int)Math.ceil(getNumSlots()/8.0);
+
     }
 
     public boolean slotOccupied(int s) {
         int byteIndex = s / 8;
         int bitIndex = s % 8;
-        return (header[byteIndex] & (1 << bitIndex)) != 0;
+        boolean isOccupied = (header[byteIndex] & (1 << bitIndex)) != 0;
+        //System.out.println("Slot " + s + " occupied: " + isOccupied);
+        return isOccupied;
     }
 
     public void setSlotOccupied(int s, boolean value) {
@@ -89,16 +104,22 @@ public class HeapPage {
     }
     
     private Tuple readNextTuple(DataInputStream dis, int slotId) {
-        if (!slotOccupied(slotId)) {
-            for (int i=0; i<td.getSize(); i++) {
-                try {
-                    dis.readByte();
-                } catch (IOException e) {
-                    throw new NoSuchElementException("Got an error from reading empty tuple");
-                }
-            }
-            return null;
-        }
+    	
+    	if (!slotOccupied(slotId)) {
+    		int bytesToSkip = td.getSize();
+    		try {
+    			if (dis.available() < bytesToSkip) {
+    				throw new NoSuchElementException("Reached end of stream");
+    			}
+    			for (int i = 0; i < bytesToSkip; i++) {
+    				dis.readByte();
+    			}
+    			
+    		} catch (IOException e) {
+    			throw new NoSuchElementException("Error reading from Stream");
+    		}
+    		return null;
+    	}
 
         Tuple t = new Tuple(td);
         t.setPid(this.id);
@@ -106,19 +127,27 @@ public class HeapPage {
 
         for (int j=0; j<td.numFields(); j++) {
             if(td.getType(j) == Type.INT) {
+                //System.out.println("Reading INT field for slot: " + slotId + ", field index: " + j);
                 byte[] field = new byte[4];
                 try {
+                	if (dis.available() < 4) {
+                		throw new NoSuchElementException("Not enough space");
+                	}
                     dis.read(field);
+                    
+                    
                     t.setField(j, new IntField(field));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             } else {
+                //System.out.println("Reading STRING field for slot: " + slotId + ", field index: " + j);
                 byte[] field = new byte[129];
                 try {
                     dis.read(field);
                     t.setField(j, new StringField(field));
                 } catch (IOException e) {
+                    //System.out.println("IO Exception while reading slot: " + slotId + ", field index: " + j);
                     e.printStackTrace();
                 }
             }
@@ -130,7 +159,7 @@ public class HeapPage {
         int len = HeapFile.PAGE_SIZE;
         ByteArrayOutputStream baos = new ByteArrayOutputStream(len);
         DataOutputStream dos = new DataOutputStream(baos);
-
+        
         for (int i=0; i<header.length; i++) {
             try {
                 dos.writeByte(header[i]);
@@ -155,6 +184,7 @@ public class HeapPage {
                 Field f = tuples[i].getField(j);
                 try {
                     dos.write(f.toByteArray());
+                    
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

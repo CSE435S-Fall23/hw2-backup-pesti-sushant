@@ -1,4 +1,5 @@
-//Sushant Ramesh
+// Sushant Ramesh and Anders Pesti
+
 package hw1;
 import java.util.*;
 
